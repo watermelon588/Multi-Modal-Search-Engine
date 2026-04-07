@@ -175,11 +175,11 @@ POST /search/audio
 
 ```json
 {
-  "transcribed_text": "modern ui dashboard design",
-  "search_results": {
-    "query": "modern ui dashboard design",
-    "results": [...]
-  }
+  "filename": "Recording (5).m4a",
+  "content_type": "audio/x-m4a",
+  "saved_path": "storage/uploads/d587f135a236f736af84726ed9da3fa1.m4a",
+  "text": " Yo, hello, can you just transcribe this voice into text and also I am retarded as fuck.",
+  "message": "Audio processed successfully"
 }
 ```
 
