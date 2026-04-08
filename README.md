@@ -1,68 +1,76 @@
-# 🎧 Multimodal Semantic Search System (Audio Pipeline - Phase 1)
+# 🎧 Multimodal Semantic Search System
 
-A backend system that processes **audio input → converts to text using Whisper → feeds into a search pipeline**.
-
-This is part of a larger **multimodal semantic retrieval system** supporting text, image, audio, video, and links.
+A backend system that processes **text, audio, and image inputs**, converts them into **vector embeddings**, and stores them in a **FAISS-based vector database** for future semantic search.
 
 ---
 
-## 🚀 Features (Current)
+## 🚀 Features
 
-* ✅ Audio file upload API
-* ✅ File validation (type + extension)
-* ✅ Deduplicated storage (hash-based)
-* ✅ Whisper integration (Audio → Text)
-* ✅ Modular backend structure (scalable)
-* ✅ Ready for integration with search pipeline
+* ✅ Text → Embedding (Sentence Transformers)
+* ✅ Audio → Text (Whisper) → Embedding
+* ✅ Image → Embedding (CLIP)
+* ✅ Persistent FAISS storage (separate indexes)
+* ✅ Duplicate prevention
+* ✅ Clean modular architecture
+* ✅ API-first design (FastAPI)
 
 ---
 
-## 🧠 Architecture (Current Flow)
+## 🧠 Architecture
 
-```
-User Upload Audio
+```text
+Input (Text / Audio / Image)
         ↓
-FastAPI Endpoint (/search/audio)
+Preprocessing Layer
+   - Audio → Whisper → Text
+   - Image → CLIP
         ↓
-Validation (type + extension)
+Embedding Layer (shared services)
         ↓
-File Storage (hash-based, no duplicates)
+Vector Storage (FAISS)
+   - text_index.index
+   - image_index.index
         ↓
-Whisper Model
-        ↓
-Text Output
-        ↓
-(Search Pipeline - placeholder)
+(Similarity Search - upcoming)
 ```
 
 ---
 
 ## 📁 Folder Structure
 
-```
+```text
 backend/
 │
 ├── app/
-│   ├── main.py                  # FastAPI entry point
+│   ├── main.py
 │
 │   ├── api/
-│   │   ├── __init__.py
-│   │   └── audio.py             # Audio route (/search/audio)
+│   │   ├── audio.py
+│   │   ├── search_text.py
+│   │   └── search_image.py
 │
 │   ├── models/
-│   │   └── audio_model.py       # Whisper model loader
+│   │   ├── audio_model.py
+│   │   ├── text_model.py
+│   │   └── image_model.py
 │
 │   ├── services/
-│   │   ├── audio_service.py     # Audio → text logic
-│   │   └── search_service.py    # (placeholder search pipeline)
+│   │   ├── audio_service.py
+│   │   ├── embedding_service.py
+│   │   ├── image_embedding_service.py
+│   │   └── faiss_service.py
 │
-│   ├── utils/
-│   │   └── file_handler.py      # File saving + hashing
+│   └── utils/
+│       └── file_handler.py
 │
 ├── storage/
-│   └── uploads/                 # Uploaded audio files (ignored in git)
+│   ├── text_index.index
+│   ├── text_data.npy
+│   ├── image_index.index
+│   ├── image_data.npy
+│   └── uploads/
 │
-├── myenv/                       # Virtual environment (ignored)
+├── myenv/
 ├── .gitignore
 └── README.md
 ```
@@ -71,49 +79,48 @@ backend/
 
 ## ⚙️ Setup Instructions
 
-### 🔹 1. Clone the Repository
+### 1. Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone <repo-url>
 cd backend
 ```
 
 ---
 
-### 🔹 2. Create Virtual Environment (Recommended)
+### 2. Create Virtual Environment
 
 ```bash
 python -m venv myenv
-myenv\Scripts\activate   # Windows
+myenv\Scripts\activate
 ```
 
 ---
 
-### 🔹 3. Install Dependencies
+### 3. Install Dependencies
 
 ```bash
-pip install fastapi uvicorn openai-whisper ffmpeg-python
+pip install fastapi uvicorn
+pip install openai-whisper ffmpeg-python
+pip install sentence-transformers faiss-cpu
+pip install torch torchvision pillow
+pip install git+https://github.com/openai/CLIP.git
 ```
 
 ---
 
-### 🔹 4. Install FFmpeg (Required)
+### 4. Install FFmpeg (Required)
 
-Whisper depends on FFmpeg.
+Download from:
+https://www.gyan.dev/ffmpeg/builds/
 
-#### Windows:
+Add to PATH:
 
-1. Download from: https://www.gyan.dev/ffmpeg/builds/
-2. Extract
-3. Add to PATH:
-
-```
+```text
 C:\ffmpeg-xxxx\bin
 ```
 
----
-
-### 🔹 5. Verify FFmpeg
+Verify:
 
 ```bash
 ffmpeg -version
@@ -121,7 +128,7 @@ ffmpeg -version
 
 ---
 
-### 🔹 6. Run the Server
+### 5. Run Server
 
 ```bash
 python -m uvicorn app.main:app --reload
@@ -129,45 +136,153 @@ python -m uvicorn app.main:app --reload
 
 ---
 
-### 🔹 7. Open API Docs
+### 6. Open API Docs
 
-```
+```text
 http://127.0.0.1:8000/docs
 ```
 
 ---
 
-## 🔌 API Routes
+## 🔌 API Endpoints
 
 ---
 
-### 🟢 Health Check
+### 🔹 Text Processing
 
-```
-GET /health
+```text
+POST /search/text
 ```
 
-**Response:**
-
-```json
-{
-  "status": "OK"
-}
-```
+**Description:**
+Generate embeddings from text and store in FAISS.
 
 ---
 
-### 🎧 Audio Search
+### 🔹 Audio Processing
 
-```
+```text
 POST /search/audio
 ```
 
+**Flow:**
+
+```text
+Audio → Whisper → Text → Embedding → FAISS
+```
+
+---
+
+### 🔹 Image Processing
+
+```text
+POST /search/image
+```
+
+**Flow:**
+
+```text
+Image → CLIP → Embedding → FAISS
+```
+
+---
+
+## 📦 Storage System
+
+FAISS indexes are stored locally:
+
+```text
+storage/
+   text_index.index
+   text_data.npy
+
+   image_index.index
+   image_data.npy
+```
+
+---
+## ⚠️ Environment Note (Important)
+
+If you encounter issues like:
+
+```text
+Module not found (fastapi / whisper / faiss)
+```
+
+It usually means dependencies are installed in different environments.
+
+### ✅ Solution
+
+You can either:
+
+**Option 1 (Recommended)**
+
+```bash
+myenv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**Option 2 (Quick Fix)**
+
+If conflicts persist, avoid virtual environment temporarily and run using:
+
+```bash
+python -m uvicorn app.main:app --reload
+```
+
+👉 Ensure all packages are installed using:
+
+```bash
+python -m pip install <package-name>
+```
+
+---
+
+## 🔌 API Endpoints (with Responses)
+
+---
+
+### 🔹 1. Text Processing
+
+```text
+POST /search/text
+```
+
+**Description:**
+Generate embedding from text and store in FAISS.
+
 **Request:**
 
-* Form-data
-* Key: `file`
-* Value: audio file (.mp3, .wav, .m4a)
+```json
+{
+  "query": "modern ui design"
+}
+```
+
+**Response:**
+
+```json
+{
+  "text": "modern ui design",
+  "status": "stored",
+  "message": "Text processed & stored successfully ✅"
+}
+```
+
+---
+
+### 🔹 2. Audio Processing
+
+```text
+POST /search/audio
+```
+
+**Description:**
+Upload audio → convert to text → generate embedding → store in FAISS.
+
+**Request:**
+
+* Form-data → `file` (mp3 / wav / m4a)
 
 ---
 
@@ -175,85 +290,95 @@ POST /search/audio
 
 ```json
 {
-  "filename": "Recording (5).m4a",
-  "content_type": "audio/x-m4a",
-  "saved_path": "storage/uploads/d587f135a236f736af84726ed9da3fa1.m4a",
-  "text": " Yo, hello, can you just transcribe this voice into text and also I am retarded as fuck.",
-  "message": "Audio processed successfully"
+  "filename": "voice.mp3",
+  "content_type": "audio/mpeg",
+  "saved_path": "storage/uploads/abc123_voice.mp3",
+  "text": "modern ui dashboard design",
+  "message": "Audio processed & embedding stored successfully ✅"
 }
 ```
 
 ---
 
-## 🧠 Key Components
+### 🔹 3. Image Processing
+
+```text
+POST /search/image
+```
+
+**Description:**
+Upload image → generate embedding using CLIP → store in FAISS.
+
+**Request:**
+
+* Form-data → `file` (jpg / png)
 
 ---
 
-### 🔹 Whisper Model
+**Response:**
 
-* Converts audio → text
-* Loaded once globally for performance
-
----
-
-### 🔹 File Handling
-
-* Uses **MD5 hashing**
-* Prevents duplicate storage
+```json
+{
+  "filename": "design.png",
+  "status": "stored",
+  "message": "Image processed & stored successfully ✅"
+}
+```
 
 ---
 
-### 🔹 Validation
+## 📌 Duplicate Handling
 
-* MIME type check
-* File extension check
+If same input is sent multiple times:
+
+```json
+{
+  "status": "duplicate"
+}
+```
+
+👉 System avoids storing duplicate embeddings.
 
 ---
+
 
 ## ⚠️ Notes
 
-* Uploaded files are stored in:
-
-  ```
-  storage/uploads/
-  ```
-* This directory is ignored in `.gitignore`
-* Whisper model is cached locally after first download
+* FAISS indexes are persistent across restarts
+* Duplicate inputs are ignored
+* Uploaded files are stored in `storage/uploads/`
+* This directory is excluded via `.gitignore`
 
 ---
 
 ## 🚀 Upcoming Features
 
-* 🔜 Text embeddings (Sentence Transformers)
-* 🔜 FAISS vector search
-* 🔜 Web search integration (Serper API)
-* 🔜 Image + Video support
+* 🔜 Similarity search (FAISS retrieval)
+* 🔜 Hybrid search (FAISS + Web APIs)
+* 🔜 Ranking system
 * 🔜 RAG-based AI summaries
-* 🔜 Explainable ranking
+* 🔜 Multimodal cross-search (text ↔ image)
 
 ---
 
-## 💡 Developer Notes
+## 🧠 Tech Stack
 
-* Use:
-
-  ```bash
-  python -m uvicorn app.main:app --reload
-  ```
-
-  (Avoid direct `uvicorn` if PATH issues)
-
-* First Whisper run may take time (model download)
+* FastAPI
+* Whisper
+* Sentence Transformers
+* FAISS
+* CLIP
+* NumPy
 
 ---
 
-## 🏁 Current Status
+## 🏁 Status
 
-```
-Audio → Text ✅
-Text → Search (basic) ✅
-Multimodal Search 🚧 (in progress)
+```text
+Text → Embedding → Stored ✅
+Audio → Text → Embedding → Stored ✅
+Image → Embedding → Stored ✅
+Search & Retrieval 🚧 (next phase)
 ```
 
 ---
-
