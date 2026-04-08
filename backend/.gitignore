@@ -5,7 +5,6 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.pyc
 
 # ----------------------------
 # Virtual Environment
@@ -15,12 +14,12 @@ venv/
 env/
 
 # ----------------------------
-# Environment variables
+# Environment Variables
 # ----------------------------
 .env
 
 # ----------------------------
-# OS files
+# OS Files
 # ----------------------------
 .DS_Store
 Thumbs.db
@@ -31,7 +30,7 @@ Thumbs.db
 *.log
 
 # ----------------------------
-# Data files (IMPORTANT)
+# Data Files
 # ----------------------------
 *.csv
 *.json
@@ -40,21 +39,29 @@ Thumbs.db
 *.parquet
 
 # ----------------------------
-# Audio / Video files
+# Media Files (Uploads)
 # ----------------------------
 *.mp3
 *.wav
 *.m4a
 *.mp4
 *.avi
+*.jpg
+*.jpeg
+*.png
 
 # ----------------------------
-# Storage (VERY IMPORTANT)
+# Storage (CRITICAL)
 # ----------------------------
 storage/
-uploads/
 
 # ----------------------------
-# Model cache (Whisper)
+# FAISS & Vector DB
+# ----------------------------
+*.index
+*.npy
+
+# ----------------------------
+# Model Cache
 # ----------------------------
 .cache/

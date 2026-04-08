@@ -14,7 +14,7 @@ def get_file_hash(file):
 
     return hashlib.md5(content).hexdigest()
 
-def save_audio_file(file):
+def save_file(file):
     # generate hash
     file_hash = get_file_hash(file)
 
