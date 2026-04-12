@@ -105,6 +105,7 @@ pip install openai-whisper ffmpeg-python
 pip install sentence-transformers faiss-cpu
 pip install torch torchvision pillow
 pip install git+https://github.com/openai/CLIP.git
+pip install requests python-dotenv
 ```
 
 ---
@@ -186,6 +187,19 @@ Image → CLIP → Embedding → FAISS
 ```
 
 ---
+###  New Service Added
+
+```text
+app/services/web_search_service.py
+```
+Handles:
+
+Serper API calls
+Multi-type data fetching:
+Web results
+Images
+Videos
+News
 
 ## 📦 Storage System
 
@@ -326,6 +340,77 @@ Upload image → generate embedding using CLIP → store in FAISS.
 ```
 
 ---
+### 🔹 4. Unified Search (Live Web Data)
+```text
+POST /search/unified
+```
+** Description**
+
+A unified testing endpoint that accepts text / audio / image input, converts everything into a text query, and fetches live results from Serper API.
+
+🔁 Flow
+Input (text/audio/image)
+        ↓
+Convert → TEXT
+        ↓
+Serper API (Live Web Data)
+        ↓
+Return structured results
+
+ **Request**
+Option 1: Text Input
+Form-data:
+query = "coffee"
+Option 2: Audio Input
+Form-data:
+file = voice.mp3
+Option 3: Image Input (temporary placeholder)
+Form-data:
+file = image.png
+ **Response**
+```json
+{
+  "query_used": "coffee",
+  "results": {
+    "web": [
+      {
+        "title": "Coffee - Wikipedia",
+        "link": "https://en.wikipedia.org/wiki/Coffee",
+        "snippet": "Coffee is a brewed drink..."
+      }
+    ],
+    "images": [
+      {
+        "title": "Coffee Cup",
+        "image_url": "...",
+        "source": "Unsplash"
+      }
+    ],
+    "videos": [
+      {
+        "title": "How to Make Coffee",
+        "link": "...",
+        "thumbnail": "..."
+      }
+    ],
+    "news": [
+      {
+        "title": "Coffee Prices Rising",
+        "link": "...",
+        "source": "BBC"
+      }
+    ]
+  }
+}
+```
+ Create .env File
+
+📁 Location: backend/.env
+
+```bash
+SERPER_API_KEY=your_serper_api_key_here
+SERPER_BASE_URL=https://google.serper.dev
+```
 
 ## 📌 Duplicate Handling
 
