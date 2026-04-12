@@ -2,12 +2,14 @@ from fastapi import FastAPI
 from app.api import audio
 from app.api import text
 from app.api import image
+from app.api import websearch
 
 app = FastAPI()
 
 app.include_router(audio.router)
 app.include_router(text.router)
 app.include_router(image.router)
+app.include_router(websearch.router)
 
 @app.get("/")
 def root():
