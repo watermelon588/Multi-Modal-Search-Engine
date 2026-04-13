@@ -436,6 +436,24 @@ If same input is sent multiple times:
 
 ---
 
+## 🚀 Latest Update
+
+### 🔹 Frontend ↔ Backend Integration
+- Connected React frontend with FastAPI backend  
+- Replaced mock data with live API results  
+- Endpoint used: `POST /search/unified`  
+
+---
+
+### 🔹 Environment Setup (Frontend)
+- Removed hardcoded API URL  
+- Added `.env` configuration  
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+
 ## 🚀 Upcoming Features
 
 * 🔜 Similarity search (FAISS retrieval)
