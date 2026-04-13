@@ -3,98 +3,28 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import SearchBar from '../components/SearchBar';
+import { unifiedSearch } from '../services/api';
 
 /* ─── Animation variants ─────────────────────────────────────── */
 const containerVariants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        transition: { staggerChildren: 0.09, delayChildren: 0.1 },
+        transition: { staggerChildren: 0.08, delayChildren: 0.05 },
     },
 };
 
-const cardVariant = {
-    hidden: { opacity: 0, y: 16, filter: 'blur(4px)' },
+const itemVariant = {
+    hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
     show: {
         opacity: 1,
         y: 0,
         filter: 'blur(0px)',
-        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+        transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
     },
 };
 
-/* ─── Dummy results ───────────────────────────────────────────── */
-const MOCK_RESULTS = [
-    {
-        id: 1,
-        title: 'Semantic Analysis of Text Query Patterns',
-        displayLink: 'arxiv.org › research › semantic-analysis',
-        snippet: 'Explores how large language models process and retrieve information from high-dimensional vector embeddings, using contrastive learning techniques to align cross-modal representations.',
-        tag: 'Research',
-    },
-    {
-        id: 2,
-        title: 'Cross-modal Retrieval with CLIP Embeddings',
-        displayLink: 'openai.com › research › clip',
-        snippet: "A comprehensive technical overview of OpenAI CLIP's approach to aligning visual and textual representations in a shared 512-dimensional embedding space for zero-shot classification.",
-        tag: 'Deep Dive',
-    },
-    {
-        id: 3,
-        title: 'Multimodal Transformers: Architecture Overview',
-        displayLink: 'paperswithcode.com › methods › multimodal',
-        snippet: 'A structured walkthrough of vision-language transformer architectures, covering cross-attention mechanisms, token fusion strategies, and benchmarks across input modalities.',
-        tag: 'Paper',
-    },
-    {
-        id: 4,
-        title: 'Vector Similarity Search at Scale with FAISS',
-        displayLink: 'engineering.fb.com › data-infrastructure',
-        snippet: 'Facebook AI Research introduces FAISS — a library for efficient similarity search and clustering of dense vectors, enabling billion-scale nearest-neighbour lookups in milliseconds.',
-        tag: 'Engineering',
-    },
-    {
-        id: 5,
-        title: 'Retrieval-Augmented Generation for Knowledge-Intensive NLP',
-        displayLink: 'arxiv.org › abs › 2005.11401',
-        snippet: 'RAG combines pre-trained parametric and non-parametric memory for language generation. This paper demonstrates substantial gains on open-domain QA, fact verification, and knowledge-grounded dialogue.',
-        tag: 'Paper',
-    },
-    {
-        id: 6,
-        title: 'Building a Multimodal Search Engine from Scratch',
-        displayLink: 'towardsdatascience.com › multimodal-search',
-        snippet: 'Step-by-step guide to architecting a production-grade multimodal search pipeline using Weaviate, CLIP, and Whisper. Covers ingest, indexing, query routing, and relevance ranking.',
-        tag: 'Tutorial',
-    },
-    {
-        id: 7,
-        title: 'Audio Embeddings for Semantic Search: A Survey',
-        displayLink: 'dl.acm.org › doi › audio-embeddings',
-        snippet: 'Surveys state-of-the-art audio representation learning models including wav2vec 2.0, HuBERT, and Whisper. Discusses use-cases in speech retrieval, music search, and environmental sound indexing.',
-        tag: 'Survey',
-    },
-    {
-        id: 8,
-        title: 'Pinecone: Managed Vector Database for AI Applications',
-        displayLink: 'pinecone.io › learn › vector-database',
-        snippet: 'Learn how managed vector databases power modern AI search systems. Covers indexing strategies, ANN algorithms, metadata filtering, and real-time upsert semantics at production scale.',
-        tag: 'Docs',
-    },
-];
-
-/* ─── Tag badge styles ────────────────────────────────────────── */
-const TAG_STYLES = {
-    Research:    'bg-violet-500/10 text-violet-300 border-violet-500/20',
-    'Deep Dive': 'bg-blue-500/10 text-blue-300 border-blue-500/20',
-    Paper:       'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-    Engineering: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-    Tutorial:    'bg-cyan-500/10 text-cyan-300 border-cyan-500/20',
-    Survey:      'bg-pink-500/10 text-pink-300 border-pink-500/20',
-    Docs:        'bg-slate-500/10 text-slate-300 border-slate-500/20',
-};
-
-/* ─── Skeleton card ───────────────────────────────────────────── */
+/* ─── Skeleton loader ─────────────────────────────────────────── */
 function SkeletonCard() {
     return (
         <div className="w-full p-5 rounded-xl border border-white/10 animate-pulse"
@@ -110,6 +40,22 @@ function SkeletonCard() {
     );
 }
 
+function SkeletonGrid() {
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+            {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="animate-pulse rounded-xl overflow-hidden"
+                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                    <div style={{ paddingBottom: '66%', background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={{ padding: '10px' }}>
+                        <div className="h-3 w-3/4 rounded-full" style={{ background: 'rgba(255,255,255,0.10)' }} />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 /* ─── Arrow icon ─────────────────────────────────────────────── */
 function ArrowIcon() {
     return (
@@ -119,7 +65,327 @@ function ArrowIcon() {
     );
 }
 
-/* ─── Main component ──────────────────────────────────────────── */
+/* ─── Section header ─────────────────────────────────────────── */
+function SectionHeader({ icon, title, count }) {
+    return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            marginBottom: '20px', paddingBottom: '14px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+        }}>
+            <span style={{ color: 'rgba(129,140,248,0.9)', fontSize: '18px' }}>{icon}</span>
+            <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '-0.01em' }}>
+                {title}
+            </h2>
+            {count > 0 && (
+                <span style={{
+                    fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.35)',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+                    borderRadius: '999px', padding: '2px 8px',
+                }}>
+                    {count}
+                </span>
+            )}
+        </div>
+    );
+}
+
+/* ─── Web result card ────────────────────────────────────────── */
+function WebCard({ item }) {
+    return (
+        <motion.a
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            variants={itemVariant}
+            whileHover={{ y: -2 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="group"
+            style={{
+                display: 'block', position: 'relative', width: '100%',
+                padding: '20px', borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.09)',
+                background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)',
+                cursor: 'pointer', overflow: 'hidden', textDecoration: 'none',
+                transition: 'background 0.2s ease, border-color 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}
+        >
+            {/* Left accent */}
+            <div className="scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"
+                 style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, transparent, rgba(129,140,248,0.5), transparent)', borderRadius: '0 2px 2px 0' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Domain badge */}
+                    <p style={{ fontSize: '12px', color: 'rgba(129,140,248,0.75)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                        {item.link}
+                    </p>
+                    {/* Title */}
+                    <h3 className="group-hover:underline underline-offset-2 decoration-white/30"
+                        style={{ fontSize: '16px', fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: '8px' }}>
+                        {item.title}
+                    </h3>
+                    {/* Snippet */}
+                    {item.snippet && (
+                        <p style={{ fontSize: '14px', color: 'rgba(209,213,219,0.85)', lineHeight: 1.65 }}>
+                            {item.snippet}
+                        </p>
+                    )}
+                </div>
+                <div className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
+                     style={{ flexShrink: 0, marginTop: '4px', color: 'rgba(255,255,255,0.25)' }}>
+                    <ArrowIcon />
+                </div>
+            </div>
+        </motion.a>
+    );
+}
+
+/* ─── Image card ─────────────────────────────────────────────── */
+function ImageCard({ item }) {
+    const [imgError, setImgError] = useState(false);
+    return (
+        <motion.div
+            variants={itemVariant}
+            whileHover={{ y: -4, scale: 1.02 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+            style={{
+                borderRadius: '12px', overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.09)',
+                background: 'rgba(255,255,255,0.04)', cursor: 'pointer',
+            }}
+        >
+            <div style={{ position: 'relative', paddingBottom: '66%', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                {!imgError ? (
+                    <img
+                        src={item.image_url}
+                        alt={item.title}
+                        onError={() => setImgError(true)}
+                        style={{
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%', objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                        }}
+                    />
+                ) : (
+                    <div style={{
+                        position: 'absolute', inset: 0, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        color: 'rgba(255,255,255,0.2)', fontSize: '12px',
+                    }}>
+                        No preview
+                    </div>
+                )}
+            </div>
+            <div style={{ padding: '10px 12px' }}>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.title}
+                </p>
+                {item.source && (
+                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.30)', marginTop: '3px' }}>
+                        {item.source}
+                    </p>
+                )}
+            </div>
+        </motion.div>
+    );
+}
+
+/* ─── Video card ─────────────────────────────────────────────── */
+function VideoCard({ item }) {
+    const [thumbError, setThumbError] = useState(false);
+    return (
+        <motion.a
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            variants={itemVariant}
+            whileHover={{ y: -3 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="group"
+            style={{
+                display: 'flex', gap: '14px', alignItems: 'flex-start',
+                padding: '14px', borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.09)',
+                background: 'rgba(255,255,255,0.04)', textDecoration: 'none',
+                transition: 'background 0.2s ease, border-color 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}
+        >
+            {/* Thumbnail */}
+            <div style={{
+                flexShrink: 0, width: '140px', height: '88px', borderRadius: '8px',
+                overflow: 'hidden', background: 'rgba(255,255,255,0.08)', position: 'relative',
+            }}>
+                {item.thumbnail && !thumbError ? (
+                    <img src={item.thumbnail} alt={item.title} onError={() => setThumbError(true)}
+                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                    </div>
+                )}
+                {/* Play overlay */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                     style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="none">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                </div>
+            </div>
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 className="group-hover:underline underline-offset-2 decoration-white/30"
+                    style={{ fontSize: '14px', fontWeight: 600, color: '#fff', lineHeight: 1.4, marginBottom: '6px' }}>
+                    {item.title}
+                </h3>
+                {item.channel && (
+                    <p style={{ fontSize: '12px', color: 'rgba(129,140,248,0.75)', marginBottom: '4px' }}>{item.channel}</p>
+                )}
+                {item.duration && (
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', padding: '2px 6px' }}>
+                        {item.duration}
+                    </span>
+                )}
+            </div>
+        </motion.a>
+    );
+}
+
+/* ─── News card ──────────────────────────────────────────────── */
+function NewsCard({ item }) {
+    return (
+        <motion.a
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            variants={itemVariant}
+            whileHover={{ y: -2 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="group"
+            style={{
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                gap: '12px', padding: '14px 16px', borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.09)',
+                background: 'rgba(255,255,255,0.04)', textDecoration: 'none',
+                transition: 'background 0.2s ease, border-color 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}
+        >
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                    {item.source && (
+                        <span style={{
+                            fontSize: '11px', fontWeight: 600, color: 'rgba(129,140,248,0.85)',
+                            background: 'rgba(129,140,248,0.10)', border: '1px solid rgba(129,140,248,0.20)',
+                            borderRadius: '999px', padding: '2px 8px',
+                        }}>
+                            {item.source}
+                        </span>
+                    )}
+                    {item.date && (
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.30)' }}>{item.date}</span>
+                    )}
+                </div>
+                <h3 className="group-hover:underline underline-offset-2 decoration-white/30"
+                    style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.90)', lineHeight: 1.4 }}>
+                    {item.title}
+                </h3>
+                {item.snippet && (
+                    <p style={{ fontSize: '13px', color: 'rgba(209,213,219,0.70)', lineHeight: 1.55, marginTop: '5px' }}>
+                        {item.snippet}
+                    </p>
+                )}
+            </div>
+            <div className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
+                 style={{ flexShrink: 0, marginTop: '2px', color: 'rgba(255,255,255,0.25)' }}>
+                <ArrowIcon />
+            </div>
+        </motion.a>
+    );
+}
+
+/* ─── Tab button ─────────────────────────────────────────────── */
+function TabButton({ id, label, icon, active, count, onClick }) {
+    return (
+        <button
+            id={`tab-${id}`}
+            onClick={() => onClick(id)}
+            style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 16px', borderRadius: '999px', fontSize: '13px',
+                fontWeight: active ? 600 : 400, cursor: 'pointer',
+                border: active ? '1px solid rgba(129,140,248,0.5)' : '1px solid rgba(255,255,255,0.09)',
+                background: active ? 'rgba(129,140,248,0.15)' : 'rgba(255,255,255,0.04)',
+                color: active ? 'rgba(200,200,255,0.95)' : 'rgba(255,255,255,0.45)',
+                transition: 'all 0.2s ease', backdropFilter: 'blur(8px)',
+            }}
+            onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}}
+            onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}}
+        >
+            <span style={{ fontSize: '14px' }}>{icon}</span>
+            {label}
+            {count > 0 && (
+                <span style={{
+                    fontSize: '10px', fontWeight: 500,
+                    background: active ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.08)',
+                    borderRadius: '999px', padding: '1px 6px',
+                    color: active ? 'rgba(200,200,255,0.8)' : 'rgba(255,255,255,0.30)',
+                }}>
+                    {count}
+                </span>
+            )}
+        </button>
+    );
+}
+
+/* ─── Error banner ───────────────────────────────────────────── */
+function ErrorBanner({ message }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            style={{
+                padding: '16px 20px', borderRadius: '12px',
+                border: '1px solid rgba(239,68,68,0.25)',
+                background: 'rgba(239,68,68,0.08)', backdropFilter: 'blur(12px)',
+                color: 'rgba(252,165,165,0.9)', fontSize: '14px',
+                display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{message}</span>
+        </motion.div>
+    );
+}
+
+/* ─── Empty section state ────────────────────────────────────── */
+function EmptySection({ label }) {
+    return (
+        <div style={{ padding: '40px 0', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '14px' }}>
+            No {label} found for this query.
+        </div>
+    );
+}
+
+/* ═══ TABS CONFIG ════════════════════════════════════════════════ */
+const TABS = [
+    { id: 'all',    label: 'All',    icon: '🔍' },
+    { id: 'web',    label: 'Web',    icon: '🌐' },
+    { id: 'images', label: 'Images', icon: '🖼️' },
+    { id: 'videos', label: 'Videos', icon: '▶️' },
+    { id: 'news',   label: 'News',   icon: '📰' },
+];
+
+const LIMIT = 5; // max results shown per section in "All" tab
+
+/* ═══ MAIN COMPONENT ═════════════════════════════════════════════ */
 export default function Search() {
     const [searchParams] = useSearchParams();
     const query    = searchParams.get('q');
@@ -133,29 +399,171 @@ export default function Search() {
 
     const hasQuery = Boolean(displayQuery);
 
-    /* 900 ms fake loading shimmer */
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading]   = useState(false);
+    const [error,   setError]     = useState(null);
+    const [results, setResults]   = useState({ web: [], images: [], videos: [], news: [] });
+    const [activeTab, setActiveTab] = useState('all');
+
     useEffect(() => {
+        if (!displayQuery) return;
+
+        // Create a controller for THIS effect invocation.
+        // If React Strict Mode fires the effect twice, the cleanup from the
+        // first run aborts its fetch before the second run starts a fresh one.
+        const controller = new AbortController();
+
         setLoading(true);
-        const t = setTimeout(() => setLoading(false), 900);
-        return () => clearTimeout(t);
-    }, [query, type, filename]);
+        setError(null);
+        setResults({ web: [], images: [], videos: [], news: [] });
+        setActiveTab('all');
+
+        unifiedSearch({ query: displayQuery, signal: controller.signal })
+            .then((data) => {
+                const r = data?.results ?? {};
+                setResults({
+                    web:    Array.isArray(r.web)    ? r.web    : [],
+                    images: Array.isArray(r.images) ? r.images : [],
+                    videos: Array.isArray(r.videos) ? r.videos : [],
+                    news:   Array.isArray(r.news)   ? r.news   : [],
+                });
+            })
+            .catch((err) => {
+                // AbortError means WE cancelled the request — not a real failure.
+                // Ignore it so valid results from a prior successful call are kept.
+                if (err.name === 'AbortError') return;
+                console.error('[Search] API error:', err);
+                setError(err.message || 'Something went wrong. Please try again.');
+            })
+            .finally(() => {
+                // Only clear the loading flag if this request wasn't aborted.
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
+            });
+
+        // Cleanup: abort the fetch when the query changes or the component unmounts.
+        return () => controller.abort();
+    }, [displayQuery]);
+
+
+    const totalCount = results.web.length + results.images.length + results.videos.length + results.news.length;
+
+    /* Tab counts (excluding 'all') */
+    const tabCounts = {
+        web:    results.web.length,
+        images: results.images.length,
+        videos: results.videos.length,
+        news:   results.news.length,
+    };
+
+    /* Visible tabs: only show when there is data (or still loading) */
+    const visibleTabs = TABS.filter(t => {
+        if (t.id === 'all') return true;
+        return loading || tabCounts[t.id] > 0;
+    });
+
+    /* ── Render sections based on active tab ─────────────────── */
+    function renderContent() {
+        if (loading) {
+            return (
+                <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
+                </motion.div>
+            );
+        }
+
+        if (error) {
+            return <ErrorBanner key="error" message={error} />;
+        }
+
+        if (totalCount === 0) {
+            return (
+                <motion.div key="empty" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '60px', gap: '12px', textAlign: 'center' }}>
+                    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <p style={{ color: 'rgba(156,163,175,1)', fontSize: '14px' }}>No results found for "{displayQuery}"</p>
+                </motion.div>
+            );
+        }
+
+        const show = activeTab;
+
+        return (
+            <motion.div key={show} initial="hidden" animate="show" exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                        variants={containerVariants} style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+
+                {/* WEB */}
+                {(show === 'all' || show === 'web') && results.web.length > 0 && (
+                    <section>
+                        <SectionHeader icon="🌐" title="Web Results" count={results.web.length} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {(show === 'all' ? results.web.slice(0, LIMIT) : results.web).map((item, i) => (
+                                <WebCard key={i} item={item} />
+                            ))}
+                        </div>
+                    </section>
+                )}
+                {show === 'web' && results.web.length === 0 && <EmptySection label="web results" />}
+
+                {/* IMAGES */}
+                {(show === 'all' || show === 'images') && results.images.length > 0 && (
+                    <section>
+                        <SectionHeader icon="🖼️" title="Images" count={results.images.length} />
+                        <motion.div variants={containerVariants} style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                            gap: '14px',
+                        }}>
+                            {(show === 'all' ? results.images.slice(0, LIMIT + 1) : results.images).map((item, i) => (
+                                <ImageCard key={i} item={item} />
+                            ))}
+                        </motion.div>
+                    </section>
+                )}
+                {show === 'images' && results.images.length === 0 && <EmptySection label="images" />}
+
+                {/* VIDEOS */}
+                {(show === 'all' || show === 'videos') && results.videos.length > 0 && (
+                    <section>
+                        <SectionHeader icon="▶️" title="Videos" count={results.videos.length} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {(show === 'all' ? results.videos.slice(0, LIMIT) : results.videos).map((item, i) => (
+                                <VideoCard key={i} item={item} />
+                            ))}
+                        </div>
+                    </section>
+                )}
+                {show === 'videos' && results.videos.length === 0 && <EmptySection label="videos" />}
+
+                {/* NEWS */}
+                {(show === 'all' || show === 'news') && results.news.length > 0 && (
+                    <section>
+                        <SectionHeader icon="📰" title="News" count={results.news.length} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {(show === 'all' ? results.news.slice(0, LIMIT) : results.news).map((item, i) => (
+                                <NewsCard key={i} item={item} />
+                            ))}
+                        </div>
+                    </section>
+                )}
+                {show === 'news' && results.news.length === 0 && <EmptySection label="news" />}
+
+            </motion.div>
+        );
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: '#000', position: 'relative' }}>
 
-            {/* ── Background layers ──────────────────────────── */}
-            <video
-                src="/1.mp4"
-                autoPlay muted loop playsInline
-                style={{
-                    position: 'absolute', inset: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover', opacity: 0.28,
-                    zIndex: 0, transform: 'translateY(4%)',
-                    pointerEvents: 'none',
-                }}
-            />
+            {/* ── Background ────────────────────────────────────── */}
+            <video src="/1.mp4" autoPlay muted loop playsInline style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                objectFit: 'cover', opacity: 0.28, zIndex: 0,
+                transform: 'translateY(4%)', pointerEvents: 'none',
+            }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1, pointerEvents: 'none' }} />
             <div style={{
                 position: 'fixed', top: 0, left: 0, right: 0, height: '256px',
@@ -163,196 +571,89 @@ export default function Search() {
                 zIndex: 2, pointerEvents: 'none',
             }} />
 
-            {/* ── Navbar ─────────────────────────────────────── */}
-            {/* Navbar is already fixed; this just ensures it stacks above content */}
+            {/* ── Navbar ────────────────────────────────────────── */}
             <div style={{ position: 'relative', zIndex: 50 }}>
                 <Navbar />
             </div>
 
-            {/* ── Page content ───────────────────────────────── */}
-            {/*
-                The navbar is position: fixed with height 64px.
-                We push content down with paddingTop: 96px (64px navbar + 32px gap).
-                All content is constrained to max-width 1024px (max-w-5xl) centered.
-            */}
-            <div
-                style={{
-                    position: 'relative',
-                    zIndex: 10,
-                    paddingTop: '96px',
-                    paddingBottom: '96px',
-                }}
-            >
-                <div
-                    style={{
-                        maxWidth: '1024px',
-                        margin: '0 auto',
-                        paddingLeft: '24px',
-                        paddingRight: '24px',
-                    }}
-                >
-                    {/* ── Search bar (always visible) ─────────── */}
-                    <div style={{ width: '100%', marginBottom: '40px' }}>
+            {/* ── Page content ──────────────────────────────────── */}
+            <div style={{ position: 'relative', zIndex: 10, paddingTop: '96px', paddingBottom: '96px' }}>
+                <div style={{ maxWidth: '1024px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
+
+                    {/* Search bar */}
+                    <div style={{ width: '100%', marginBottom: '32px' }}>
                         <SearchBar compact />
                     </div>
 
-                    {/* ── Conditional content area ────────────── */}
-                    <AnimatePresence mode="wait">
+                    {/* ── Empty state (no query) ─────────────────── */}
+                    {!hasQuery && (
+                        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '12px', textAlign: 'center' }}>
+                            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <p style={{ color: 'rgba(156,163,175,1)', fontSize: '14px', letterSpacing: '0.025em' }}>
+                                Start searching to explore results
+                            </p>
+                        </motion.div>
+                    )}
 
-                        {/* EMPTY STATE */}
-                        {!hasQuery && (
+                    {/* ── Results area ───────────────────────────── */}
+                    {hasQuery && (
+                        <>
+                            {/* Results header */}
                             <motion.div
-                                key="empty"
-                                initial={{ opacity: 0, y: 14 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.35 }}
-                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', paddingBottom: '96px', gap: '12px', textAlign: 'center' }}
+                                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, ease: 'easeOut' }}
+                                style={{
+                                    display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                                    marginBottom: '20px', paddingBottom: '18px',
+                                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                                }}
                             >
-                                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                                <p style={{ color: 'rgba(156,163,175,1)', fontSize: '14px', letterSpacing: '0.025em' }}>
-                                    Start searching to explore results
-                                </p>
-                            </motion.div>
-                        )}
-
-                        {/* SKELETON STATE */}
-                        {hasQuery && loading && (
-                            <motion.div
-                                key="skeleton"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.25 }}
-                                style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}
-                            >
-                                {/* Header skeleton */}
-                                <div
-                                    style={{ width: '100%', paddingBottom: '20px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-                                    className="animate-pulse"
-                                >
-                                    <div style={{ height: '10px', width: '80px', borderRadius: '9999px', background: 'rgba(255,255,255,0.10)', marginBottom: '12px' }} />
-                                    <div style={{ height: '22px', width: '240px', borderRadius: '9999px', background: 'rgba(255,255,255,0.10)' }} />
+                                <div style={{ minWidth: 0, flex: 1, paddingRight: '16px' }}>
+                                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: '5px' }}>
+                                        Results for
+                                    </p>
+                                    <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'rgba(255,255,255,0.90)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        "{displayQuery}"
+                                    </h1>
                                 </div>
-                                {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
-                            </motion.div>
-                        )}
-
-                        {/* RESULTS STATE */}
-                        {hasQuery && !loading && (
-                            <motion.div
-                                key="results"
-                                style={{ width: '100%' }}
-                                initial="hidden"
-                                animate="show"
-                                exit={{ opacity: 0 }}
-                                variants={containerVariants}
-                            >
-                                {/* Results header */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.4, ease: 'easeOut' }}
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        alignItems: 'flex-end',
-                                        justifyContent: 'space-between',
-                                        marginBottom: '32px',
-                                        paddingBottom: '20px',
-                                        borderBottom: '1px solid rgba(255,255,255,0.08)',
-                                    }}
-                                >
-                                    <div style={{ minWidth: 0, flex: 1, paddingRight: '16px' }}>
-                                        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: '6px' }}>
-                                            Results for
-                                        </p>
-                                        <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'rgba(255,255,255,0.90)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            "{displayQuery}"
-                                        </h1>
-                                    </div>
+                                {!loading && (
                                     <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', flexShrink: 0, paddingBottom: '2px' }}>
-                                        {MOCK_RESULTS.length} results
+                                        {totalCount} result{totalCount !== 1 ? 's' : ''}
                                     </span>
-                                </motion.div>
-
-                                {/* Result cards */}
-                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {MOCK_RESULTS.map(result => (
-                                        <motion.div
-                                            key={result.id}
-                                            variants={cardVariant}
-                                            whileHover={{ y: -2 }}
-                                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                                            className="group"
-                                            style={{
-                                                position: 'relative',
-                                                width: '100%',
-                                                padding: '20px',
-                                                borderRadius: '12px',
-                                                border: '1px solid rgba(255,255,255,0.09)',
-                                                background: 'rgba(255,255,255,0.04)',
-                                                backdropFilter: 'blur(12px)',
-                                                cursor: 'pointer',
-                                                overflow: 'hidden',
-                                                transition: 'background 0.2s ease, border-color 0.2s ease',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'; }}
-                                        >
-                                            {/* Left accent line */}
-                                            <div
-                                                className="scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"
-                                                style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, transparent, rgba(129,140,248,0.5), transparent)', borderRadius: '0 2px 2px 0' }}
-                                            />
-
-                                            {/* Card inner */}
-                                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-
-                                                    {/* Tag */}
-                                                    <span className={`inline-block text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full border mb-3 ${TAG_STYLES[result.tag] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
-                                                        {result.tag}
-                                                    </span>
-
-                                                    {/* Title */}
-                                                    <h2
-                                                        className="group-hover:underline underline-offset-2 decoration-white/30"
-                                                        style={{ fontSize: '17px', fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: '6px' }}
-                                                    >
-                                                        {result.title}
-                                                    </h2>
-
-                                                    {/* URL */}
-                                                    <p style={{ fontSize: '13px', color: 'rgba(156,163,175,1)', marginBottom: '8px', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {result.displayLink}
-                                                    </p>
-
-                                                    {/* Snippet */}
-                                                    <p style={{ fontSize: '14px', color: 'rgba(209,213,219,1)', lineHeight: 1.65 }}>
-                                                        {result.snippet}
-                                                    </p>
-                                                </div>
-
-                                                {/* Arrow */}
-                                                <div
-                                                    className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
-                                                    style={{ flexShrink: 0, marginTop: '4px', color: 'rgba(255,255,255,0.25)' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
-                                                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
-                                                >
-                                                    <ArrowIcon />
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                                )}
                             </motion.div>
-                        )}
 
-                    </AnimatePresence>
+                            {/* Tabs */}
+                            {(!loading && totalCount > 0) && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                    style={{ display: 'flex', gap: '8px', marginBottom: '28px', flexWrap: 'wrap' }}
+                                >
+                                    {visibleTabs.map(tab => (
+                                        <TabButton
+                                            key={tab.id}
+                                            id={tab.id}
+                                            label={tab.label}
+                                            icon={tab.icon}
+                                            active={activeTab === tab.id}
+                                            count={tab.id !== 'all' ? tabCounts[tab.id] : 0}
+                                            onClick={setActiveTab}
+                                        />
+                                    ))}
+                                </motion.div>
+                            )}
+
+                            {/* Content */}
+                            <AnimatePresence mode="wait">
+                                {renderContent()}
+                            </AnimatePresence>
+                        </>
+                    )}
+
                 </div>
             </div>
         </div>
