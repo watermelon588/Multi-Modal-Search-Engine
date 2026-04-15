@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import SearchBar from '../components/SearchBar';
 import { unifiedSearch } from '../services/api';
+import { getPendingFile, clearPendingFile } from '../fileStore';
 
 /* ─── Animation variants ─────────────────────────────────────── */
 const containerVariants = {
@@ -407,9 +408,6 @@ export default function Search() {
     useEffect(() => {
         if (!displayQuery) return;
 
-        // Create a controller for THIS effect invocation.
-        // If React Strict Mode fires the effect twice, the cleanup from the
-        // first run aborts its fetch before the second run starts a fresh one.
         const controller = new AbortController();
 
         setLoading(true);
@@ -417,7 +415,16 @@ export default function Search() {
         setResults({ web: [], images: [], videos: [], news: [] });
         setActiveTab('all');
 
-        unifiedSearch({ query: displayQuery, signal: controller.signal })
+        // Retrieve the pending file (set by SearchBar before navigation)
+        const pendingFile = type === 'file' ? getPendingFile() : null;
+        // Clear store immediately so it's not reused on a subsequent navigation
+        if (pendingFile) clearPendingFile();
+
+        unifiedSearch({
+            query: type === 'file' ? undefined : query,
+            file:  pendingFile ?? undefined,
+            signal: controller.signal,
+        })
             .then((data) => {
                 const r = data?.results ?? {};
                 setResults({
@@ -428,20 +435,14 @@ export default function Search() {
                 });
             })
             .catch((err) => {
-                // AbortError means WE cancelled the request — not a real failure.
-                // Ignore it so valid results from a prior successful call are kept.
                 if (err.name === 'AbortError') return;
                 console.error('[Search] API error:', err);
                 setError(err.message || 'Something went wrong. Please try again.');
             })
             .finally(() => {
-                // Only clear the loading flag if this request wasn't aborted.
-                if (!controller.signal.aborted) {
-                    setLoading(false);
-                }
+                if (!controller.signal.aborted) setLoading(false);
             });
 
-        // Cleanup: abort the fetch when the query changes or the component unmounts.
         return () => controller.abort();
     }, [displayQuery]);
 
@@ -582,7 +583,7 @@ export default function Search() {
 
                     {/* Search bar */}
                     <div style={{ width: '100%', marginBottom: '32px' }}>
-                        <SearchBar compact />
+                        <SearchBar compact loading={loading} initialQuery={query ?? ''} />
                     </div>
 
                     {/* ── Empty state (no query) ─────────────────── */}

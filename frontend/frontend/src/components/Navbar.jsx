@@ -12,43 +12,114 @@ export default function Navbar() {
 
     return (
         <motion.header
-            initial={{ y: -20, opacity: 0 }}
+            initial={{ y: -24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="fixed top-0 inset-x-0 z-50 h-16 flex items-center bg-white/5 backdrop-blur-md border-b border-white/10"
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 50,
+                height: '64px',
+                display: 'flex',
+                alignItems: 'center',
+                background: 'rgba(10, 10, 18, 0.55)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
         >
-            <div className="max-w-6xl mx-auto px-6 w-full flex justify-between items-center">
+            <div style={{
+                maxWidth: '1152px',
+                margin: '0 auto',
+                padding: '0 24px',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+            }}>
+
                 {/* Logo */}
                 <Link
                     to="/"
-                    className="text-white font-semibold text-base tracking-tight hover:opacity-70"
+                    style={{
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        letterSpacing: '-0.02em',
+                        textDecoration: 'none',
+                        background: 'linear-gradient(#ffffff 0%, #ffffffff 60%, #ffffffff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        transition: 'opacity 0.2s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
                     Synchronicity
                 </Link>
 
                 {/* Nav links */}
-                <nav className="flex items-center gap-6">
+                <nav style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                     {NAV_LINKS.map(({ label, to }) => {
                         const active = location.pathname === to;
                         return (
                             <Link
                                 key={label}
                                 to={to}
-                                className={`text-sm font-medium ${active
-                                    ? 'text-white'
-                                    : 'text-gray-500 hover:text-gray-200'
-                                    }`}
+                                style={{
+                                    fontSize: '13.5px',
+                                    fontWeight: active ? 600 : 400,
+                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                    textDecoration: 'none',
+                                    letterSpacing: '0.01em',
+                                    transition: 'color 0.2s ease, font-weight 0.2s ease',
+                                    position: 'relative',
+                                }}
+                                onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.9)'; }}
+                                onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
                             >
                                 {label}
+                                {active && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        bottom: '-4px',
+                                        left: '0',
+                                        right: '0',
+                                        height: '2px',
+                                        borderRadius: '999px',
+                                        background: 'linear-gradient( #ffffffff, #ffffffff)',
+                                    }} />
+                                )}
                             </Link>
                         );
                     })}
                 </nav>
 
-                {/* CTA */}
-                <button className="text-sm font-medium px-4 py-2 rounded-lg bg-white text-black hover:bg-gray-200 hover:shadow-md">
+                {/* CTA Button */}
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        padding: '7px 18px',
+                        borderRadius: '999px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        letterSpacing: '0.01em',
+                        background: 'linear-gradient(135deg, #fbfbfbff 0%, #ffffffff 100%)',
+                        color: '#000000ff',
+                        transition: 'box-shadow 0.25s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0  rgba(139, 92, 246, 0.65), 0 4px 16px rgba(0,0,0,0.4)'}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0  rgba(139, 92, 246, 0.45), 0 2px 8px rgba(0,0,0,0.3)'}
+                >
                     Get Started
-                </button>
+                </motion.button>
+
             </div>
         </motion.header>
     );
