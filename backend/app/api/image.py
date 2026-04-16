@@ -30,7 +30,7 @@ async def image_embedding(file: UploadFile = File(...)):
         "filename": file.filename,
         "content_type" : file.content_type,
         "status": status,
-        "caption": image_query,
+        "Optimized_query" : image_query,
         "message": "Image processed & stored successfully",
         "embedding": embedding,
     }

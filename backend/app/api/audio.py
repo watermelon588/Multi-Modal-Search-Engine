@@ -3,10 +3,11 @@ from app.utils.file_handler import save_file
 from app.services.audio_service import audio_to_text
 from app.services.embedding_services import get_embedding
 from app.services.faiss_service import add_text_embedding
+from app.services.query_service import optimize_query, clean_text
 
 router = APIRouter(prefix="/search")
 
-ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp3"]
+ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp3", "audio/webm"]
 
 @router.post("/audio",
             summary="Process Audio Input",
@@ -14,7 +15,7 @@ ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp3"]
 async def search_audio(file: UploadFile = File(...)):
 
     # validate by file extension
-    if not file.filename.endswith((".mp3", ".wav", ".m4a")):
+    if not file.filename.endswith((".mp3", ".wav", ".m4a", ".webm")):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type: {file.filename}"
@@ -27,17 +28,22 @@ async def search_audio(file: UploadFile = File(...)):
     # audio → text
     text = audio_to_text(file_path)
 
+    # raw text → optimized query
+    cleaned = clean_text(text)
+    final_query = optimize_query(cleaned)
+
     # text → vector embedding
-    embedding = get_embedding(text)
+    embedding = get_embedding(final_query)
 
     # store in FAISS
-    status = add_text_embedding(embedding, text)
+    status = add_text_embedding(embedding, final_query)
 
     return {
         "filename" : file.filename,
         "content_type" : file.content_type,
         "saved_path" : file_path,
         "text" : text,
+        "Optimized_query" : final_query,
         "status": status,
         "message" : "Audio processed & embedding stored successfully",
         "embedding" : embedding,
