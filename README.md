@@ -39,40 +39,79 @@ Vector Storage (FAISS)
 ## 📁 Folder Structure
 
 ```text
-backend/
+WHISPER/
 │
-├── app/
-│   ├── main.py
+├── backend/
+│ ├── app/
+│ │ ├── api/ # API route handlers (FastAPI endpoints)
+│ │ │ ├── init.py
+│ │ │ ├── audio.py # Audio → text (Whisper)
+│ │ │ ├── image.py # Image → embedding / caption
+│ │ │ ├── text.py # Text → embedding
+│ │ │ └── websearch.py # Unified search (Serper API)
+│ │ │
+│ │ ├── models/ # ML model loaders
+│ │ │ ├── audio_model.py # Whisper model
+│ │ │ ├── caption_model.py # BLIP (image captioning)
+│ │ │ ├── image_model.py # CLIP (image embeddings)
+│ │ │ ├── query_model.py # Local LLM (Qwen)
+│ │ │ └── text_model.py # Text embedding model
+│ │ │
+│ │ ├── services/ # Core business logic
+│ │ │ ├── audio_service.py # Audio → text logic
+│ │ │ ├── embedding_services.py # Text embeddings
+│ │ │ ├── faiss_service.py # Vector DB (FAISS)
+│ │ │ ├── image_service.py # Image embeddings + caption
+│ │ │ ├── query_service.py # Query optimization (LLM)
+│ │ │ ├── search_service.py # Search orchestration
+│ │ │ └── web_search_service.py # Serper API integration
+│ │ │
+│ │ ├── utils/ # Utility helpers
+│ │ │ └── file_handler.py # File saving / handling
+│ │ │
+│ │ ├── config.py # Environment config (.env loader)
+│ │ └── main.py # FastAPI app entry point
+│ │
+│ └── myenv/ # Python virtual environment
 │
-│   ├── api/
-│   │   ├── audio.py
-│   │   ├── search_text.py
-│   │   └── search_image.py
+├── frontend/
+│ ├── dist/ # Production build output
+│ ├── node_modules/ # Dependencies
+│ ├── public/ # Static assets
+│ │
+│ ├── src/
+│ │ ├── assets/ # Images / static files
+│ │ │
+│ │ ├── components/ # Reusable UI components
+│ │ │ ├── CustomCursor.jsx
+│ │ │ ├── Hero.jsx
+│ │ │ ├── Navbar.jsx
+│ │ │ └── SearchBar.jsx # Core multimodal input UI
+│ │ │
+│ │ ├── pages/ # Page-level components
+│ │ │ ├── Home.jsx
+│ │ │ └── Search.jsx # Results page
+│ │ │
+│ │ ├── services/ # API communication layer
+│ │ │ └── api.js # Backend API calls
+│ │ │
+│ │ ├── config.js # Environment config (Vite)
+│ │ ├── fileStore.js # File state management
+│ │ │
+│ │ ├── App.jsx # Root component
+│ │ ├── App.css
+│ │ ├── index.css
+│ │ └── main.jsx # Entry point
+│ │
+│ ├── .env # Frontend environment variables
+│ ├── .gitignore
+│ ├── eslint.config.js
+│ ├── index.html
+│ ├── package.json
+│ ├── package-lock.json
+│ └── README.md
 │
-│   ├── models/
-│   │   ├── audio_model.py
-│   │   ├── text_model.py
-│   │   └── image_model.py
-│
-│   ├── services/
-│   │   ├── audio_service.py
-│   │   ├── embedding_service.py
-│   │   ├── image_embedding_service.py
-│   │   └── faiss_service.py
-│
-│   └── utils/
-│       └── file_handler.py
-│
-├── storage/
-│   ├── text_index.index
-│   ├── text_data.npy
-│   ├── image_index.index
-│   ├── image_data.npy
-│   └── uploads/
-│
-├── myenv/
-├── .gitignore
-└── README.md
+└── README.md # Project documentation
 ```
 
 ---
@@ -106,6 +145,7 @@ pip install sentence-transformers faiss-cpu
 pip install torch torchvision pillow
 pip install git+https://github.com/openai/CLIP.git
 pip install requests python-dotenv
+pip install transformers accelerate
 ```
 
 ---
@@ -441,7 +481,12 @@ If same input is sent multiple times:
 ### 🔹 Frontend ↔ Backend Integration
 - Connected React frontend with FastAPI backend  
 - Replaced mock data with live API results  
-- Endpoint used: `POST /search/unified`  
+- Endpoint used: `POST /search/unified`
+
+🔹 Query Optimization (Local LLM)
+Added query optimizer service
+Uses lightweight local LLM (Qwen2.5-1.5B-Instruct)
+Pipeline:
 
 ---
 
