@@ -1,38 +1,40 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE_URL } from '../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { setPendingFile, clearPendingFile } from '../fileStore';
 
 /* ─── Upload type definitions ───────────────────────────────────── */
 const UPLOAD_TYPES = [
-    { id: 'all',   accept: 'image/*,video/*,audio/*', title: 'Add photos & files', faClass: 'fa-solid fa-paperclip' },
-    { id: 'image', accept: 'image/*',  title: 'Image',  faClass: 'fa-regular fa-image' },
-    { id: 'video', accept: 'video/*',  title: 'Video',  faClass: 'fa-solid fa-film' },
-    { id: 'audio', accept: 'audio/*',  title: 'Audio',  faClass: 'fa-solid fa-microphone-lines' },
+    { id: 'all', accept: 'image/*,video/*,audio/*', title: 'Add photos & files', faClass: 'fa-solid fa-paperclip' },
+    { id: 'image', accept: 'image/*', title: 'Image', faClass: 'fa-regular fa-image' },
+    { id: 'video', accept: 'video/*', title: 'Video', faClass: 'fa-solid fa-film' },
+    { id: 'audio', accept: 'audio/*', title: 'Audio', faClass: 'fa-solid fa-microphone-lines' },
 ];
 
 /* ═══ SEARCHBAR ════════════════════════════════════════════════════ */
-export default function SearchBar({ compact = false, initialQuery = '', loading = false }) {
-    const [query,      setQuery]      = useState(initialQuery);
-    const [file,       setFile]       = useState(null);       // File | null
+export default function SearchBar({ compact = false, initialQuery = '', loading: externalLoading = false }) {
+    const [loading, setLoading] = useState(false);
+    const [query, setQuery] = useState(initialQuery);
+    const [file, setFile] = useState(null);       // File | null
     const [imgPreview, setImgPreview] = useState(null);       // object URL | null
-    const [focused,    setFocused]    = useState(false);
-    const [dragging,   setDragging]   = useState(false);
-    const [showMenu,   setShowMenu]   = useState(false);
-    
+    const [focused, setFocused] = useState(false);
+    const [dragging, setDragging] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+
     // Voice Modal State
     const [showVoiceModal, setShowVoiceModal] = useState(false);
-    const [isRecording,  setIsRecording]  = useState(false);
-    const [mediaRecorder,setMediaRecorder] = useState(null);
-    const [audioBlob,    setAudioBlob]    = useState(null);
-    const [audioURL,     setAudioURL]     = useState(null);
-    const [isPlaying,    setIsPlaying]    = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [audioBlob, setAudioBlob] = useState(null);
+    const [audioURL, setAudioURL] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [audioInstance, setAudioInstance] = useState(null);
 
-    const navigate     = useNavigate();
+    const navigate = useNavigate();
     const fileInputRef = useRef(null);
     const activeTypeId = useRef(null);
-    const menuRef      = useRef(null);
+    const menuRef = useRef(null);
 
     /* ── close menu on outside click ────────────────────────────── */
     useEffect(() => {
@@ -99,7 +101,7 @@ export default function SearchBar({ compact = false, initialQuery = '', loading 
         setIsPlaying(false);
         setAudioBlob(null);
         if (audioURL) { URL.revokeObjectURL(audioURL); setAudioURL(null); }
-        
+
         setShowVoiceModal(true);
 
         try {
@@ -117,11 +119,11 @@ export default function SearchBar({ compact = false, initialQuery = '', loading 
                 const url = URL.createObjectURL(blob);
                 setAudioBlob(blob);
                 setAudioURL(url);
-                
+
                 const newAudio = new Audio(url);
                 newAudio.onended = () => setIsPlaying(false);
                 setAudioInstance(newAudio);
-                
+
                 stream.getTracks().forEach(track => track.stop());
             };
 
@@ -151,22 +153,54 @@ export default function SearchBar({ compact = false, initialQuery = '', loading 
     };
 
     /* ── submit ─────────────────────────────────────────────────── */
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e?.preventDefault();
-        const q = query.trim();
+
+        const q = (query || "").trim();
 
         if (!q && !file) return;
-        const params = new URLSearchParams();
-        if (q)    params.set('q', q);
-        if (file) { params.set('type', 'file'); params.set('filename', file.name); params.set('kind', activeTypeId.current ?? 'unknown'); }
-        navigate(`/search?${params.toString()}`);
+
+        try {
+            setLoading(true);
+
+            const formData = new FormData();
+
+            if (q) formData.append("query", q);
+            if (file) formData.append("file", file);
+
+            const res = await fetch(`${BASE_URL}/search/unified`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error("Search failed:", data);
+                return;
+            }
+
+            // Navigate with response data
+            navigate("/search", {
+                state: { results: data, query: q, file: file ? { name: file.name, type: file.type } : null }
+            });
+
+        } catch (err) {
+            console.error("Submission error:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
     };
 
-    const canSubmit = (!!query.trim() || !!file) && !loading;
+    const isSubmitting = loading || externalLoading;
+    const canSubmit = (!!query.trim() || !!file) && !isSubmitting;
 
     /* ── border / glow styles ───────────────────────────────────── */
     const borderColor = dragging
@@ -223,7 +257,7 @@ export default function SearchBar({ compact = false, initialQuery = '', loading 
                 {/* ── TOP ROW: File preview (Only visible when file exists) ──────────────────────── */}
                 <AnimatePresence>
                     {file && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.8, height: 0 }}
                             animate={{ opacity: 1, scale: 1, height: 'auto' }}
                             exit={{ opacity: 0, scale: 0.8, height: 0 }}
@@ -468,7 +502,7 @@ export default function SearchBar({ compact = false, initialQuery = '', loading 
                             transition: 'background 0.2s ease, color 0.2s ease',
                         }}
                     >
-                        {loading ? (
+                        {isSubmitting ? (
                             <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '15px' }} />
                         ) : (
                             <i className="fa-solid fa-arrow-up" style={{ fontSize: '16px' }} />

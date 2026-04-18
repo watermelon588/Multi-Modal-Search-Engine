@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import SearchBar from '../components/SearchBar';
-import { unifiedSearch } from '../services/api';
-import { getPendingFile, clearPendingFile } from '../fileStore';
 
 /* ─── Animation variants ─────────────────────────────────────── */
 const containerVariants = {
@@ -388,63 +386,28 @@ const LIMIT = 5; // max results shown per section in "All" tab
 
 /* ═══ MAIN COMPONENT ═════════════════════════════════════════════ */
 export default function Search() {
-    const [searchParams] = useSearchParams();
-    const query    = searchParams.get('q');
-    const type     = searchParams.get('type');
-    const filename = searchParams.get('filename');
-    const kind     = searchParams.get('kind');
+    const location = useLocation();
+    const query = location.state?.query || '';
+    const file = location.state?.file;
+    const rawResults = location.state?.results?.results || {};
 
-    const displayQuery = type === 'file'
-        ? `${kind ? `[${kind}] ` : ''}${filename}`
+    const displayQuery = file 
+        ? `${query ? `${query} ` : ''}[File] ${file.name}` 
         : query;
 
     const hasQuery = Boolean(displayQuery);
 
-    const [loading, setLoading]   = useState(false);
-    const [error,   setError]     = useState(null);
-    const [results, setResults]   = useState({ web: [], images: [], videos: [], news: [] });
     const [activeTab, setActiveTab] = useState('all');
 
-    useEffect(() => {
-        if (!displayQuery) return;
+    const results = {
+        web:    Array.isArray(rawResults.web)    ? rawResults.web    : [],
+        images: Array.isArray(rawResults.images) ? rawResults.images : [],
+        videos: Array.isArray(rawResults.videos) ? rawResults.videos : [],
+        news:   Array.isArray(rawResults.news)   ? rawResults.news   : [],
+    };
 
-        const controller = new AbortController();
-
-        setLoading(true);
-        setError(null);
-        setResults({ web: [], images: [], videos: [], news: [] });
-        setActiveTab('all');
-
-        // Retrieve the pending file (set by SearchBar before navigation)
-        const pendingFile = type === 'file' ? getPendingFile() : null;
-        // Clear store immediately so it's not reused on a subsequent navigation
-        if (pendingFile) clearPendingFile();
-
-        unifiedSearch({
-            query: type === 'file' ? undefined : query,
-            file:  pendingFile ?? undefined,
-            signal: controller.signal,
-        })
-            .then((data) => {
-                const r = data?.results ?? {};
-                setResults({
-                    web:    Array.isArray(r.web)    ? r.web    : [],
-                    images: Array.isArray(r.images) ? r.images : [],
-                    videos: Array.isArray(r.videos) ? r.videos : [],
-                    news:   Array.isArray(r.news)   ? r.news   : [],
-                });
-            })
-            .catch((err) => {
-                if (err.name === 'AbortError') return;
-                console.error('[Search] API error:', err);
-                setError(err.message || 'Something went wrong. Please try again.');
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [displayQuery]);
+    const loading = false;
+    const error = null;
 
 
     const totalCount = results.web.length + results.images.length + results.videos.length + results.news.length;
@@ -583,7 +546,7 @@ export default function Search() {
 
                     {/* Search bar */}
                     <div style={{ width: '100%', marginBottom: '32px' }}>
-                        <SearchBar compact loading={loading} initialQuery={query ?? ''} />
+                        <SearchBar compact initialQuery={query ?? ''} />
                     </div>
 
                     {/* ── Empty state (no query) ─────────────────── */}
