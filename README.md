@@ -498,15 +498,6 @@ Pipeline:
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-
-## 🚀 Upcoming Features
-
-* 🔜 Similarity search (FAISS retrieval)
-* 🔜 Hybrid search (FAISS + Web APIs)
-* 🔜 Ranking system
-* 🔜 RAG-based AI summaries
-* 🔜 Multimodal cross-search (text ↔ image)
-
 ---
 
 ## 🧠 Tech Stack
